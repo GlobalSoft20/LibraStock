@@ -22,6 +22,8 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Library", icon: <BookOpen className="w-5 h-5" />, path: "/admin/library" },
     { label: "Stock", icon: <Package className="w-5 h-5" />, path: "/admin/stock" },
     { label: "Accounts", icon: <UserPlus className="w-5 h-5" />, path: "/admin/accounts" },
+    { label: "Reports", icon: <FileText className="w-5 h-5" />, path: "/admin/reports" },
+    { label: "Notifications", icon: <Bell className="w-5 h-5" />, path: "/admin/notifications" },
     { label: "Settings", icon: <Settings className="w-5 h-5" />, path: "/admin/settings" },
   ],
   librarian: [
