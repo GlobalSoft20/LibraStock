@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, Lock, User, ArrowRight } from "lucide-react";
 import { useAuth, getRoleDashboard } from "@/contexts/AuthContext";
+import studentBg from "@/assets/student.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,16 +34,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 gradient-primary relative overflow-hidden items-center justify-center">
-        <div className="absolute inset-0 opacity-10">
-          {[...Array(6)].map((_, i) => (
-            <motion.div key={i} className="absolute rounded-full border border-primary-foreground/20"
-              style={{ width: 100 + i * 120, height: 100 + i * 120, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
-              animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
-              transition={{ duration: 3 + i, repeat: Infinity, ease: "easeInOut" }}
-            />
-          ))}
-        </div>
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center">
+        <img src={studentBg} alt="Students" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-primary/60" />
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="relative z-10 text-center px-12">
           <div className="w-20 h-20 rounded-2xl bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-8">
             <BookOpen className="w-10 h-10 text-primary-foreground" />
