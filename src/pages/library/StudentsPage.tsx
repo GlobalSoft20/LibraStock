@@ -10,7 +10,7 @@ import { useData } from "@/contexts/DataContext";
 import { toast } from "sonner";
 
 export default function StudentsPage() {
-  const { students, setStudents, departments } = useData();
+  const { students, setStudents, departments, levels, classes } = useData();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -22,6 +22,18 @@ export default function StudentsPage() {
   const [uploadLevel, setUploadLevel] = useState("");
   const [uploadClass, setUploadClass] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const filteredClasses = classes.filter(c => {
+    const deptObj = departments.find(d => d.name === dept);
+    const lvlObj = levels.find(l => l.name === level);
+    return (!dept || c.departmentId === deptObj?.id) && (!level || c.levelId === lvlObj?.id);
+  });
+
+  const uploadFilteredClasses = classes.filter(c => {
+    const deptObj = departments.find(d => d.name === uploadDept);
+    const lvlObj = levels.find(l => l.name === uploadLevel);
+    return (!uploadDept || c.departmentId === deptObj?.id) && (!uploadLevel || c.levelId === lvlObj?.id);
+  });
 
   const filtered = students.filter(s =>
     s.fullName.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase())
@@ -89,12 +101,24 @@ export default function StudentsPage() {
             <DialogContent className="bg-card border-border">
               <DialogHeader><DialogTitle className="text-foreground">Upload Student List</DialogTitle></DialogHeader>
               <div className="space-y-3">
-                <Select value={uploadDept} onValueChange={setUploadDept}>
-                  <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select Department" /></SelectTrigger>
-                  <SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}</SelectContent>
-                </Select>
-                <Input value={uploadLevel} onChange={e => setUploadLevel(e.target.value)} placeholder="Level" className="bg-secondary border-border" />
-                <Input value={uploadClass} onChange={e => setUploadClass(e.target.value)} placeholder="Class" className="bg-secondary border-border" />
+                <div><Label className="text-foreground">Department</Label>
+                  <Select value={uploadDept} onValueChange={(v) => { setUploadDept(v); setUploadLevel(""); setUploadClass(""); }}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select Department" /></SelectTrigger>
+                    <SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label className="text-foreground">Level</Label>
+                  <Select value={uploadLevel} onValueChange={(v) => { setUploadLevel(v); setUploadClass(""); }}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select Level" /></SelectTrigger>
+                    <SelectContent>{levels.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label className="text-foreground">Class</Label>
+                  <Select value={uploadClass} onValueChange={setUploadClass}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select Class" /></SelectTrigger>
+                    <SelectContent>{uploadFilteredClasses.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label className="text-foreground text-sm">Supports: CSV, Excel, DOC, PDF</Label>
                   <input type="file" ref={fileRef} accept=".csv,.xlsx,.xls,.doc,.docx,.pdf" onChange={handleFileUpload} className="hidden" />
@@ -112,13 +136,23 @@ export default function StudentsPage() {
               <div className="space-y-3">
                 <div><Label className="text-foreground">Full Name</Label><Input value={fullName} onChange={e => setFullName(e.target.value)} className="bg-secondary border-border" /></div>
                 <div><Label className="text-foreground">Department</Label>
-                  <Select value={dept} onValueChange={setDept}>
-                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <Select value={dept} onValueChange={(v) => { setDept(v); setLevel(""); setCls(""); }}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select Department" /></SelectTrigger>
                     <SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div><Label className="text-foreground">Level</Label><Input value={level} onChange={e => setLevel(e.target.value)} className="bg-secondary border-border" /></div>
-                <div><Label className="text-foreground">Class</Label><Input value={cls} onChange={e => setCls(e.target.value)} className="bg-secondary border-border" /></div>
+                <div><Label className="text-foreground">Level</Label>
+                  <Select value={level} onValueChange={(v) => { setLevel(v); setCls(""); }}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select Level" /></SelectTrigger>
+                    <SelectContent>{levels.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label className="text-foreground">Class</Label>
+                  <Select value={cls} onValueChange={setCls}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select Class" /></SelectTrigger>
+                    <SelectContent>{filteredClasses.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
                 <Button onClick={handleAddStudent} className="w-full gradient-primary text-primary-foreground">Add Student</Button>
               </div>
             </DialogContent>

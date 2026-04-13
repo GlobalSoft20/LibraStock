@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, Lock, User, ArrowRight } from "lucide-react";
 import { useAuth, getRoleDashboard } from "@/contexts/AuthContext";
@@ -78,7 +78,11 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-8 p-4 rounded-xl bg-muted/50 border border-border">
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            Need an admin account? <Link to="/register" className="text-primary hover:underline font-medium">Register here</Link>
+          </p>
+
+          <div className="mt-6 p-4 rounded-xl bg-muted/50 border border-border">
             <p className="text-xs font-medium text-muted-foreground mb-3">Demo Credentials</p>
             <div className="space-y-1.5 text-xs text-muted-foreground">
               <p><span className="font-semibold text-foreground">Admin:</span> admin / admin123</p>

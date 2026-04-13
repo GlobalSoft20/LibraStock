@@ -35,6 +35,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Borrow", icon: <ArrowUpFromLine className="w-5 h-5" />, path: "/library/borrow" },
     { label: "Return", icon: <ArrowDownToLine className="w-5 h-5" />, path: "/library/return" },
     { label: "Reports", icon: <FileText className="w-5 h-5" />, path: "/library/reports" },
+    { label: "Notifications", icon: <Bell className="w-5 h-5" />, path: "/library/notifications" },
     { label: "Settings", icon: <Settings className="w-5 h-5" />, path: "/library/settings" },
   ],
   stock_manager: [
@@ -43,6 +44,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Stock In", icon: <ArrowDownToLine className="w-5 h-5" />, path: "/stock/in" },
     { label: "Stock Out", icon: <ArrowUpFromLine className="w-5 h-5" />, path: "/stock/out" },
     { label: "Reports", icon: <FileText className="w-5 h-5" />, path: "/stock/reports" },
+    { label: "Notifications", icon: <Bell className="w-5 h-5" />, path: "/stock/notifications" },
     { label: "Settings", icon: <Settings className="w-5 h-5" />, path: "/stock/settings" },
   ],
 };
@@ -156,10 +158,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-secondary transition-colors text-foreground" title="Toggle dark mode">
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            <button className="p-2 rounded-lg hover:bg-secondary transition-colors relative text-foreground">
+            <Link
+              to={user.role === "admin" ? "/admin/notifications" : user.role === "librarian" ? "/library/notifications" : "/stock/notifications"}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors relative text-foreground"
+            >
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive" />
-            </button>
+            </Link>
           </div>
         </header>
 

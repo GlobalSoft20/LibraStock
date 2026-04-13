@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { DataProvider } from "@/contexts/DataContext";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import DashboardLayout from "./components/DashboardLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLibraryPage from "./pages/admin/AdminLibraryPage";
@@ -48,6 +49,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <Index />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <LoginPage />} />
+      <Route path="/register" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <RegisterPage />} />
       <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/library" element={<ProtectedRoute allowedRoles={["admin"]}><AdminLibraryPage /></ProtectedRoute>} />
       <Route path="/admin/stock" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStockPage /></ProtectedRoute>} />
@@ -63,12 +65,14 @@ function AppRoutes() {
       <Route path="/library/borrow" element={<ProtectedRoute allowedRoles={["librarian"]}><BorrowPage /></ProtectedRoute>} />
       <Route path="/library/return" element={<ProtectedRoute allowedRoles={["librarian"]}><ReturnPage /></ProtectedRoute>} />
       <Route path="/library/reports" element={<ProtectedRoute allowedRoles={["librarian"]}><LibraryReportsPage /></ProtectedRoute>} />
+      <Route path="/library/notifications" element={<ProtectedRoute allowedRoles={["librarian"]}><NotificationsPage /></ProtectedRoute>} />
       <Route path="/library/settings" element={<ProtectedRoute allowedRoles={["librarian"]}><SettingsPage /></ProtectedRoute>} />
       <Route path="/stock" element={<ProtectedRoute allowedRoles={["stock_manager"]}><StockDashboard /></ProtectedRoute>} />
       <Route path="/stock/items" element={<ProtectedRoute allowedRoles={["stock_manager"]}><StockItemsPage /></ProtectedRoute>} />
       <Route path="/stock/in" element={<ProtectedRoute allowedRoles={["stock_manager"]}><StockInPage /></ProtectedRoute>} />
       <Route path="/stock/out" element={<ProtectedRoute allowedRoles={["stock_manager"]}><StockOutPage /></ProtectedRoute>} />
       <Route path="/stock/reports" element={<ProtectedRoute allowedRoles={["stock_manager"]}><StockReportsPage /></ProtectedRoute>} />
+      <Route path="/stock/notifications" element={<ProtectedRoute allowedRoles={["stock_manager"]}><NotificationsPage /></ProtectedRoute>} />
       <Route path="/stock/settings" element={<ProtectedRoute allowedRoles={["stock_manager"]}><SettingsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

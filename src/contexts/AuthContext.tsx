@@ -14,6 +14,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => boolean;
+  register: (username: string, password: string, fullName: string, email: string, phone: string) => boolean;
   logout: () => void;
   isAuthenticated: boolean;
   updateUser: (updates: Partial<User>) => void;
@@ -22,7 +23,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const MOCK_USERS: Record<string, { password: string; user: User }> = {
+const DEFAULT_USERS: Record<string, { password: string; user: User }> = {
   admin: {
     password: "admin123",
     user: { id: "1", username: "admin", fullName: "System Administrator", email: "admin@lsms.com", phone: "+255700000000", role: "admin" },
@@ -39,17 +40,29 @@ const MOCK_USERS: Record<string, { password: string; user: User }> = {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [passwords, setPasswords] = useState<Record<string, string>>({
-    admin: "admin123", librarian: "lib123", stockmgr: "stock123",
-  });
+  const [users, setUsers] = useState<Record<string, { password: string; user: User }>>(DEFAULT_USERS);
 
   const login = (username: string, password: string): boolean => {
-    const found = MOCK_USERS[username];
-    if (found && passwords[username] === password) {
+    const found = users[username];
+    if (found && found.password === password) {
       setUser(found.user);
       return true;
     }
     return false;
+  };
+
+  const register = (username: string, password: string, fullName: string, email: string, phone: string): boolean => {
+    if (users[username]) return false;
+    const newUser: User = {
+      id: Date.now().toString(),
+      username,
+      fullName,
+      email,
+      phone,
+      role: "admin",
+    };
+    setUsers(prev => ({ ...prev, [username]: { password, user: newUser } }));
+    return true;
   };
 
   const logout = () => setUser(null);
@@ -59,15 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const changePassword = (oldPass: string, newPass: string): boolean => {
-    if (user && passwords[user.username] === oldPass) {
-      setPasswords(p => ({ ...p, [user.username]: newPass }));
+    if (user && users[user.username]?.password === oldPass) {
+      setUsers(prev => ({ ...prev, [user.username]: { ...prev[user.username], password: newPass } }));
       return true;
     }
     return false;
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, updateUser, changePassword }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user, updateUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );
