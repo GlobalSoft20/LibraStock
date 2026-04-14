@@ -15,15 +15,14 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !username || !password) {
+    if (!fullName || !email || !password) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -36,13 +35,13 @@ export default function RegisterPage() {
       return;
     }
     setLoading(true);
-    const success = register(username, password, fullName, email, phone);
+    const result = await register(email, password, fullName, phone, "admin");
     setLoading(false);
-    if (success) {
-      toast.success("Admin account created! Please log in.");
-      navigate("/login");
+    if (result.success) {
+      toast.success("Account created! Please check your email to confirm.");
+      navigate("/confirm-email");
     } else {
-      toast.error("Username already exists");
+      toast.error(result.error || "Registration failed");
     }
   };
 
@@ -50,7 +49,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex">
       <div className="hidden lg:flex lg:w-1/2 relative">
         <img src={studentBg} alt="Students" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-primary/60" />
+        <div className="absolute inset-0 bg-primary/20" />
         <div className="relative z-10 flex flex-col justify-center p-12 text-primary-foreground">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <div className="flex items-center gap-3 mb-6">
@@ -87,7 +86,6 @@ export default function RegisterPage() {
               <div><Label className="text-foreground">Full Name *</Label><Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Enter full name" className="bg-secondary border-border" /></div>
               <div><Label className="text-foreground">Email *</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter email" className="bg-secondary border-border" /></div>
               <div><Label className="text-foreground">Phone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter phone number" className="bg-secondary border-border" /></div>
-              <div><Label className="text-foreground">Username *</Label><Input value={username} onChange={e => setUsername(e.target.value)} placeholder="Choose a username" className="bg-secondary border-border" /></div>
               <div className="relative">
                 <Label className="text-foreground">Password *</Label>
                 <Input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" className="bg-secondary border-border pr-10" />

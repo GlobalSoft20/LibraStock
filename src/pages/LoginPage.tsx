@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BookOpen, Lock, User, ArrowRight } from "lucide-react";
+import { BookOpen, Lock, Mail, ArrowRight } from "lucide-react";
 import { useAuth, getRoleDashboard } from "@/contexts/AuthContext";
 import studentBg from "@/assets/student.png";
 import { Button } from "@/components/ui/button";
@@ -9,27 +9,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    setTimeout(() => {
-      const success = login(username, password);
-      if (success) {
-        const role = username === "admin" ? "admin" : username === "librarian" ? "librarian" : "stock_manager";
-        navigate(getRoleDashboard(role));
-      } else {
-        setError("Invalid username or password");
+    const result = await login(email, password);
+    if (result.success) {
+      // Auth state listener will update user, then we navigate
+      const { data } = await (await import("@/integrations/supabase/client")).supabase.auth.getUser();
+      const role = (data.user?.user_metadata?.role as string) || "admin";
+      navigate(getRoleDashboard(role as any));
+    } else {
+      setError(result.error || "Invalid credentials");
+      if (result.needsConfirmation) {
+        navigate("/confirm-email");
       }
-      setLoading(false);
-    }, 600);
+    }
+    setLoading(false);
   };
 
   return (
@@ -59,10 +62,10 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-foreground font-medium">Username</Label>
+              <Label htmlFor="email" className="text-foreground font-medium">Email</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter your username" className="pl-10 h-12 bg-secondary border-border" required />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" className="pl-10 h-12 bg-secondary border-border" required />
               </div>
             </div>
             <div className="space-y-2">
@@ -81,15 +84,6 @@ export default function LoginPage() {
           <p className="text-center text-sm text-muted-foreground mt-4">
             Need an admin account? <Link to="/register" className="text-primary hover:underline font-medium">Register here</Link>
           </p>
-
-          <div className="mt-6 p-4 rounded-xl bg-muted/50 border border-border">
-            <p className="text-xs font-medium text-muted-foreground mb-3">Demo Credentials</p>
-            <div className="space-y-1.5 text-xs text-muted-foreground">
-              <p><span className="font-semibold text-foreground">Admin:</span> admin / admin123</p>
-              <p><span className="font-semibold text-foreground">Librarian:</span> librarian / lib123</p>
-              <p><span className="font-semibold text-foreground">Stock Manager:</span> stockmgr / stock123</p>
-            </div>
-          </div>
         </motion.div>
       </div>
     </div>

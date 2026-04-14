@@ -9,6 +9,7 @@ import { DataProvider } from "@/contexts/DataContext";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ConfirmEmailPage from "./pages/ConfirmEmailPage";
 import DashboardLayout from "./components/DashboardLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLibraryPage from "./pages/admin/AdminLibraryPage";
@@ -42,14 +43,19 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
 }
 
 function AppRoutes() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
   const defaultPath = user ? (user.role === "admin" ? "/admin" : user.role === "librarian" ? "/library" : "/stock") : "/";
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-background"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  }
 
   return (
     <Routes>
       <Route path="/" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <Index />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <LoginPage />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <RegisterPage />} />
+      <Route path="/confirm-email" element={<ConfirmEmailPage />} />
       <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/library" element={<ProtectedRoute allowedRoles={["admin"]}><AdminLibraryPage /></ProtectedRoute>} />
       <Route path="/admin/stock" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStockPage /></ProtectedRoute>} />

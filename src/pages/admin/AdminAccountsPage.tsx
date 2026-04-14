@@ -19,7 +19,7 @@ export default function AdminAccountsPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"librarian" | "stock_manager" | "">("");
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!fullName || !email || !phone || !role || !username || !password) {
       toast.error("Fill all fields including username and password");
       return;
@@ -29,9 +29,9 @@ export default function AdminAccountsPage() {
       return;
     }
     // Register in auth system so they can log in
-    const success = register(username, password, fullName, email, phone, role as "librarian" | "stock_manager");
-    if (!success) {
-      toast.error("Username already exists");
+    const result = await register(email, password, fullName, phone, role as "librarian" | "stock_manager");
+    if (!result.success) {
+      toast.error(result.error || "Failed to create account");
       return;
     }
     setAccounts(prev => [...prev, {

@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 
 export type UserRole = "admin" | "librarian" | "stock_manager";
 
@@ -9,78 +11,114 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
+  emailConfirmed: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => boolean;
-  register: (username: string, password: string, fullName: string, email: string, phone: string, role?: UserRole) => boolean;
-  logout: () => void;
+  session: Session | null;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; needsConfirmation?: boolean }>;
+  register: (email: string, password: string, fullName: string, phone: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
+  isLoading: boolean;
   updateUser: (updates: Partial<User>) => void;
-  changePassword: (oldPass: string, newPass: string) => boolean;
+  changePassword: (newPass: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const DEFAULT_USERS: Record<string, { password: string; user: User }> = {
-  admin: {
-    password: "admin123",
-    user: { id: "1", username: "admin", fullName: "System Administrator", email: "admin@lsms.com", phone: "+255700000000", role: "admin" },
-  },
-  librarian: {
-    password: "lib123",
-    user: { id: "2", username: "librarian", fullName: "Jane Librarian", email: "jane@lsms.com", phone: "+255711111111", role: "librarian" },
-  },
-  stockmgr: {
-    password: "stock123",
-    user: { id: "3", username: "stockmgr", fullName: "John Stock", email: "john@lsms.com", phone: "+255722222222", role: "stock_manager" },
-  },
-};
+function mapSupabaseUser(su: SupabaseUser): User {
+  const meta = su.user_metadata || {};
+  return {
+    id: su.id,
+    username: meta.username || su.email || "",
+    fullName: meta.full_name || "",
+    email: su.email || "",
+    phone: meta.phone || "",
+    role: (meta.role as UserRole) || "admin",
+    emailConfirmed: !!su.email_confirmed_at,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<Record<string, { password: string; user: User }>>(DEFAULT_USERS);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = (username: string, password: string): boolean => {
-    const found = users[username];
-    if (found && found.password === password) {
-      setUser(found.user);
-      return true;
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        setUser(mapSupabaseUser(session.user));
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    // THEN get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        setUser(mapSupabaseUser(session.user));
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; needsConfirmation?: boolean }> => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (error.message.includes("Email not confirmed")) {
+        return { success: false, needsConfirmation: true, error: "Please confirm your email before signing in. Check your inbox." };
+      }
+      return { success: false, error: error.message };
     }
-    return false;
+    if (data.user && !data.user.email_confirmed_at) {
+      return { success: false, needsConfirmation: true, error: "Please confirm your email before signing in." };
+    }
+    return { success: true };
   };
 
-  const register = (username: string, password: string, fullName: string, email: string, phone: string, role: UserRole = "admin"): boolean => {
-    if (users[username]) return false;
-    const newUser: User = {
-      id: Date.now().toString(),
-      username,
-      fullName,
+  const register = async (email: string, password: string, fullName: string, phone: string, role: UserRole = "admin"): Promise<{ success: boolean; error?: string }> => {
+    const { error } = await supabase.auth.signUp({
       email,
-      phone,
-      role,
-    };
-    setUsers(prev => ({ ...prev, [username]: { password, user: newUser } }));
-    return true;
+      password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          full_name: fullName,
+          phone,
+          role,
+          username: email,
+        },
+      },
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   };
 
-  const logout = () => setUser(null);
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+  };
 
   const updateUser = (updates: Partial<User>) => {
     if (user) setUser({ ...user, ...updates });
   };
 
-  const changePassword = (oldPass: string, newPass: string): boolean => {
-    if (user && users[user.username]?.password === oldPass) {
-      setUsers(prev => ({ ...prev, [user.username]: { ...prev[user.username], password: newPass } }));
-      return true;
-    }
-    return false;
+  const changePassword = async (newPass: string): Promise<boolean> => {
+    const { error } = await supabase.auth.updateUser({ password: newPass });
+    return !error;
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user, updateUser, changePassword }}>
+    <AuthContext.Provider value={{ user, session, login, register, logout, isAuthenticated: !!session && !!user?.emailConfirmed, isLoading, updateUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

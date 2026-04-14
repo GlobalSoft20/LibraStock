@@ -20,7 +20,7 @@ export default function SettingsPage() {
     toast.success("Phone number updated successfully");
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       toast.error("Passwords do not match");
@@ -30,7 +30,7 @@ export default function SettingsPage() {
       toast.error("Password must be at least 4 characters");
       return;
     }
-    const success = changePassword(oldPassword, newPassword);
+    const success = await changePassword(newPassword);
     if (success) {
       toast.success("Password changed successfully");
       setOldPassword("");
