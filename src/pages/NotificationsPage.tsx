@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, AlertTriangle, BookOpen, Package, CheckCircle2, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useData } from "@/contexts/DataContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Notification {
   id: string;
+  category: "library" | "stock" | "system";
   type: "warning" | "info" | "alert";
   title: string;
   message: string;
@@ -15,6 +17,7 @@ interface Notification {
 
 export default function NotificationsPage() {
   const { borrowRecords, stockItems, stockMovements, accounts } = useData();
+  const { user } = useAuth();
 
   const autoNotifications = useMemo(() => {
     const notifs: Notification[] = [];
@@ -23,6 +26,7 @@ export default function NotificationsPage() {
     borrowRecords.filter(r => r.status === "overdue").forEach(r => {
       notifs.push({
         id: `overdue-${r.id}`,
+        category: "library",
         type: "alert",
         title: "Overdue Book",
         message: `"${r.bookName}" borrowed by ${r.borrowerName} on ${r.borrowDate} is overdue.`,
@@ -35,6 +39,7 @@ export default function NotificationsPage() {
     stockItems.filter(i => i.quantity <= i.lowStockQty).forEach(i => {
       notifs.push({
         id: `lowstock-${i.id}`,
+        category: "stock",
         type: "warning",
         title: "Low Stock Alert",
         message: `"${i.name}" is running low — only ${i.quantity} left (threshold: ${i.lowStockQty}).`,
@@ -47,6 +52,7 @@ export default function NotificationsPage() {
     borrowRecords.filter(r => r.status === "borrowed").slice(-3).forEach(r => {
       notifs.push({
         id: `borrow-${r.id}`,
+        category: "library",
         type: "info",
         title: "Book Borrowed",
         message: `${r.borrowerName} borrowed "${r.bookName}" (Qty: ${r.quantity}) on ${r.borrowDate}.`,
@@ -59,6 +65,7 @@ export default function NotificationsPage() {
     stockMovements.slice(-3).forEach(m => {
       notifs.push({
         id: `stock-${m.id}`,
+        category: "stock",
         type: "info",
         title: m.type === "in" ? "Stock Added" : "Stock Removed",
         message: `${m.quantity}x "${m.itemName}" ${m.type === "in" ? `added by ${m.addedBy || "Unknown"}` : `taken by ${m.takenBy || "Unknown"}`} on ${m.date}.`,
@@ -71,6 +78,7 @@ export default function NotificationsPage() {
     accounts.forEach(a => {
       notifs.push({
         id: `account-${a.id}`,
+        category: "system",
         type: "info",
         title: "New Account Created",
         message: `${a.fullName} was added as ${a.role.replace("_", " ")} on ${a.createdAt}.`,
@@ -85,7 +93,16 @@ export default function NotificationsPage() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
-  const visibleNotifs = autoNotifications.filter(n => !dismissed.has(n.id));
+  const visibleNotifs = autoNotifications
+    .filter(n => {
+      if (!user) return false;
+      if (user.role === "admin") return true;
+      if (user.role === "librarian") return n.category === "library";
+      if (user.role === "stock_manager") return n.category === "stock";
+      return false;
+    })
+    .filter(n => !dismissed.has(n.id));
+
   const unreadCount = visibleNotifs.filter(n => !readIds.has(n.id)).length;
 
   const markAllRead = () => setReadIds(new Set(autoNotifications.map(n => n.id)));

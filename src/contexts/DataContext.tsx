@@ -1,8 +1,10 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface Department {
   id: string;
   name: string;
+  description: string;
 }
 
 export interface Level {
@@ -29,6 +31,7 @@ export interface Book {
 
 export interface Student {
   id: string;
+  studentNumber: string;
   fullName: string;
   department: string;
   level: string;
@@ -111,63 +114,170 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | null>(null);
 
+function mapDepartment(row: any): Department {
+  return { id: row.id, name: row.name, description: row.description ?? "" };
+}
+
+function mapLevel(row: any): Level {
+  return { id: row.id, name: row.name };
+}
+
+function mapClass(row: any): SchoolClass {
+  return { id: row.id, name: row.name, departmentId: row.department_id, levelId: row.level_id };
+}
+
+function mapBook(row: any): Book {
+  return {
+    id: row.id,
+    name: row.name,
+    author: row.author,
+    category: row.category,
+    totalCopy: row.total_copy,
+    availableCopy: row.available_copy,
+    coverUrl: row.cover_url ?? undefined,
+  };
+}
+
+function mapStudent(row: any): Student {
+  return {
+    id: row.id,
+    studentNumber: row.student_number ?? row.studentNumber ?? row.id,
+    fullName: row.full_name,
+    department: row.department,
+    level: row.level,
+    class: row.class,
+  };
+}
+
+function mapTeacher(row: any): Teacher {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    email: row.email ?? "",
+    phone: row.phone ?? "",
+    subject: row.subject ?? "",
+  };
+}
+
+function mapBorrowRecord(row: any): BorrowRecord {
+  return {
+    id: row.id,
+    bookId: row.book_id,
+    bookName: row.book_name,
+    borrowerType: row.borrower_type,
+    borrowerId: row.borrower_id,
+    borrowerName: row.borrower_name,
+    quantity: row.quantity,
+    borrowDate: row.borrow_date,
+    returnDate: row.return_date ?? undefined,
+    status: row.status,
+  };
+}
+
+function mapStockItem(row: any): StockItem {
+  return {
+    id: row.id,
+    name: row.name,
+    quantity: row.quantity,
+    lowStockQty: row.low_stock_qty,
+    addedDate: row.added_date,
+  };
+}
+
+function mapStockMovement(row: any): StockMovement {
+  return {
+    id: row.id,
+    itemId: row.item_id,
+    itemName: row.item_name,
+    type: row.type,
+    quantity: row.quantity,
+    supplierName: row.supplier_name ?? undefined,
+    takenBy: row.taken_by ?? undefined,
+    pricePerUnit: row.price_per_unit ?? undefined,
+    date: row.date,
+    addedBy: row.added_by ?? undefined,
+  };
+}
+
+function mapAccount(row: any): AccountRecord {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    email: row.email,
+    phone: row.phone ?? "",
+    role: row.role,
+    createdAt: row.created_at,
+  };
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [departments, setDepartments] = useState<Department[]>([
-    { id: "1", name: "Computer Science" },
-    { id: "2", name: "Business" },
-    { id: "3", name: "Engineering" },
-  ]);
-  const [levels, setLevels] = useState<Level[]>([
-    { id: "1", name: "Level 1" },
-    { id: "2", name: "Level 2" },
-    { id: "3", name: "Level 3" },
-    { id: "4", name: "Level 4" },
-  ]);
-  const [classes, setClasses] = useState<SchoolClass[]>([
-    { id: "1", name: "CS-1A", departmentId: "1", levelId: "1" },
-    { id: "2", name: "CS-2A", departmentId: "1", levelId: "2" },
-    { id: "3", name: "BUS-1A", departmentId: "2", levelId: "1" },
-  ]);
-  const [books, setBooks] = useState<Book[]>([
-    { id: "1", name: "Java Programming", author: "Herbert Schildt", category: "Science", totalCopy: 15, availableCopy: 12 },
-    { id: "2", name: "Database Systems", author: "Thomas Connolly", category: "Science", totalCopy: 10, availableCopy: 7 },
-    { id: "3", name: "The Great Gatsby", author: "F. Scott Fitzgerald", category: "Fiction", totalCopy: 8, availableCopy: 8 },
-    { id: "4", name: "Physics Principles", author: "Raymond Serway", category: "Science", totalCopy: 12, availableCopy: 9 },
-    { id: "5", name: "Organic Chemistry", author: "John McMurry", category: "Science", totalCopy: 6, availableCopy: 3 },
-  ]);
-  const [students, setStudents] = useState<Student[]>([
-    { id: "STD0001", fullName: "John Kamau", department: "Computer Science", level: "Level 3", class: "CS-3A" },
-    { id: "STD0002", fullName: "Mary Wanjiku", department: "Business", level: "Level 2", class: "BUS-2B" },
-    { id: "STD0003", fullName: "Peter Ochieng", department: "Engineering", level: "Level 4", class: "ENG-4A" },
-    { id: "STD0004", fullName: "Grace Muthoni", department: "Computer Science", level: "Level 1", class: "CS-1A" },
-  ]);
-  const [teachers, setTeachers] = useState<Teacher[]>([
-    { id: "TCH0001", fullName: "Dr. Alice Mwangi", email: "alice@school.com", phone: "+255700111111", subject: "Mathematics" },
-    { id: "TCH0002", fullName: "Prof. James Otieno", email: "james@school.com", phone: "+255700222222", subject: "Physics" },
-  ]);
-  const [borrowRecords, setBorrowRecords] = useState<BorrowRecord[]>([
-    { id: "BR001", bookId: "1", bookName: "Java Programming", borrowerType: "student", borrowerId: "STD0001", borrowerName: "John Kamau", quantity: 1, borrowDate: "2025-04-10", status: "borrowed" },
-    { id: "BR002", bookId: "2", bookName: "Database Systems", borrowerType: "teacher", borrowerId: "TCH0001", borrowerName: "Dr. Alice Mwangi", quantity: 1, borrowDate: "2025-04-08", returnDate: "2025-04-11", status: "returned" },
-    { id: "BR003", bookId: "3", bookName: "The Great Gatsby", borrowerType: "student", borrowerId: "STD0002", borrowerName: "Mary Wanjiku", quantity: 1, borrowDate: "2025-03-20", status: "overdue" },
-  ]);
-  const [stockItems, setStockItems] = useState<StockItem[]>([
-    { id: "SI001", name: "A4 Paper Reams", quantity: 50, lowStockQty: 10, addedDate: "2025-04-01" },
-    { id: "SI002", name: "Whiteboard Markers", quantity: 120, lowStockQty: 20, addedDate: "2025-04-01" },
-    { id: "SI003", name: "Printer Ink", quantity: 8, lowStockQty: 5, addedDate: "2025-04-02" },
-  ]);
-  const [stockMovements, setStockMovements] = useState<StockMovement[]>([
-    { id: "SM001", itemId: "SI001", itemName: "A4 Paper Reams", type: "in", quantity: 50, supplierName: "Office Supplies Ltd", pricePerUnit: 5000, date: "2025-04-01", addedBy: "John Stock" },
-    { id: "SM002", itemId: "SI002", itemName: "Whiteboard Markers", type: "in", quantity: 120, supplierName: "Stationery World", pricePerUnit: 1500, date: "2025-04-01", addedBy: "John Stock" },
-    { id: "SM003", itemId: "SI001", itemName: "A4 Paper Reams", type: "out", quantity: 10, takenBy: "Library Dept", date: "2025-04-05" },
-  ]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [borrowRecords, setBorrowRecords] = useState<BorrowRecord[]>([]);
+  const [stockItems, setStockItems] = useState<StockItem[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes] = await Promise.all([
+        supabase.from("departments").select("*").order("name", { ascending: true }),
+        supabase.from("levels").select("*").order("name", { ascending: true }),
+        supabase.from("school_classes").select("*").order("name", { ascending: true }),
+        supabase.from("books").select("*").order("name", { ascending: true }),
+        supabase.from("students").select("*").order("full_name", { ascending: true }),
+        supabase.from("teachers").select("*").order("full_name", { ascending: true }),
+        supabase.from("borrow_records").select("*").order("borrow_date", { ascending: false }),
+        supabase.from("stock_items").select("*").order("added_date", { ascending: false }),
+        supabase.from("stock_movements").select("*").order("date", { ascending: false }),
+        supabase.from("account_records").select("*").order("created_at", { ascending: false }),
+      ]);
+
+      if (!departmentsRes.error) setDepartments(departmentsRes.data.map(mapDepartment));
+      if (!levelsRes.error) setLevels(levelsRes.data.map(mapLevel));
+      if (!classesRes.error) setClasses(classesRes.data.map(mapClass));
+      if (!booksRes.error) setBooks(booksRes.data.map(mapBook));
+      if (!studentsRes.error) setStudents(studentsRes.data.map(mapStudent));
+      if (!teachersRes.error) setTeachers(teachersRes.data.map(mapTeacher));
+      if (!borrowRes.error) setBorrowRecords(borrowRes.data.map(mapBorrowRecord));
+      if (!stockItemsRes.error) setStockItems(stockItemsRes.data.map(mapStockItem));
+      if (!stockMovementsRes.error) setStockMovements(stockMovementsRes.data.map(mapStockMovement));
+      if (!accountsRes.error) setAccounts(accountsRes.data.map(mapAccount));
+
+      if (departmentsRes.error || levelsRes.error || classesRes.error || booksRes.error || studentsRes.error || teachersRes.error || borrowRes.error || stockItemsRes.error || stockMovementsRes.error || accountsRes.error) {
+        console.error({ departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes });
+      }
+    };
+
+    loadData();
+  }, []);
 
   return (
     <DataContext.Provider value={{
-      departments, setDepartments, levels, setLevels, classes, setClasses,
-      books, setBooks, students, setStudents, teachers, setTeachers,
-      borrowRecords, setBorrowRecords, stockItems, setStockItems,
-      stockMovements, setStockMovements, accounts, setAccounts,
+      departments,
+      setDepartments,
+      levels,
+      setLevels,
+      classes,
+      setClasses,
+      books,
+      setBooks,
+      students,
+      setStudents,
+      teachers,
+      setTeachers,
+      borrowRecords,
+      setBorrowRecords,
+      stockItems,
+      setStockItems,
+      stockMovements,
+      setStockMovements,
+      accounts,
+      setAccounts,
     }}>
       {children}
     </DataContext.Provider>

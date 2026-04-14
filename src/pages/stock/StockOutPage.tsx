@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 import { useData } from "@/contexts/DataContext";
 import { toast } from "sonner";
 
@@ -19,19 +20,48 @@ export default function StockOutPage() {
     !searchItem || i.name.toLowerCase().includes(searchItem.toLowerCase())
   );
 
-  const handleRemove = () => {
+  const handleRemove = async () => {
     if (!selectedItem || !quantity || !takenBy) { toast.error("Fill all fields"); return; }
     const qty = parseInt(quantity);
     const item = stockItems.find(i => i.id === selectedItem);
     if (!item || item.quantity < qty) { toast.error("Not enough stock"); return; }
 
-    setStockItems(prev => prev.map(i => i.id === selectedItem ? { ...i, quantity: i.quantity - qty } : i));
-    setStockMovements(prev => [...prev, {
-      id: `SM${String(prev.length + 1).padStart(3, "0")}`,
-      itemId: selectedItem, itemName: item.name,
-      type: "out", quantity: qty, takenBy,
+    const { error: stockError } = await supabase.from("stock_items").update({ quantity: item.quantity - qty }).eq("id", selectedItem);
+    if (stockError) {
+      toast.error(stockError.message);
+      return;
+    }
+
+    const { data, error: movementError } = await supabase.from("stock_movements").insert({
+      item_id: selectedItem,
+      item_name: item.name,
+      type: "out",
+      quantity: qty,
+      taken_by: takenBy,
       date: new Date().toISOString().split("T")[0],
-    }]);
+    }).select().single();
+
+    if (movementError) {
+      toast.error(movementError.message);
+      return;
+    }
+
+    setStockItems(prev => prev.map(i => i.id === selectedItem ? { ...i, quantity: i.quantity - qty } : i));
+    if (data) {
+      setStockMovements(prev => [...prev, {
+        id: data.id,
+        itemId: data.item_id,
+        itemName: data.item_name,
+        type: data.type,
+        quantity: data.quantity,
+        supplierName: data.supplier_name ?? undefined,
+        takenBy: data.taken_by ?? undefined,
+        pricePerUnit: data.price_per_unit ?? undefined,
+        date: data.date,
+        addedBy: data.added_by ?? undefined,
+      }] );
+    }
+
     setSelectedItem(""); setQuantity(""); setTakenBy(""); setSearchItem("");
     toast.success("Stock removed");
   };

@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 import { useData } from "@/contexts/DataContext";
 import { toast } from "sonner";
 
@@ -12,13 +13,30 @@ export default function StockItemsPage() {
   const [name, setName] = useState("");
   const [lowQty, setLowQty] = useState("");
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!name || !lowQty) { toast.error("Fill all fields"); return; }
-    setStockItems(prev => [...prev, {
-      id: `SI${String(prev.length + 1).padStart(3, "0")}`,
-      name, quantity: 0, lowStockQty: parseInt(lowQty),
-      addedDate: new Date().toISOString().split("T")[0],
-    }]);
+    const { data, error } = await supabase.from("stock_items").insert({
+      name,
+      quantity: 0,
+      low_stock_qty: parseInt(lowQty),
+      added_date: new Date().toISOString().split("T")[0],
+    }).select().single();
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    if (data) {
+      setStockItems(prev => [...prev, {
+        id: data.id,
+        name: data.name,
+        quantity: data.quantity,
+        lowStockQty: data.low_stock_qty,
+        addedDate: data.added_date,
+      }] );
+    }
+
     setName(""); setLowQty("");
     toast.success("Item added");
   };

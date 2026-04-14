@@ -1,12 +1,13 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, BookOpen, Upload } from "lucide-react";
+import { Plus, Search, BookOpen, Upload, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useData } from "@/contexts/DataContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const CATEGORIES = ["Science", "Fiction", "History", "Mathematics", "Technology", "Literature", "Arts", "Business"];
@@ -35,24 +36,51 @@ export default function BooksPage() {
     }
   };
 
-  const handleAddBook = () => {
+  const handleAddBook = async () => {
     if (!bookName || !author || !category || !totalCopy) {
       toast.error("Please fill all fields");
       return;
     }
     const copies = parseInt(totalCopy);
-    setBooks(prev => [...prev, {
-      id: Date.now().toString(),
+    const { data, error } = await supabase.from("books").insert({
       name: bookName,
       author,
       category,
-      totalCopy: copies,
-      availableCopy: copies,
-      coverUrl: coverPreview,
-    }]);
+      total_copy: copies,
+      available_copy: copies,
+      cover_url: coverPreview,
+    }).select().single();
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    if (data) {
+      setBooks(prev => [...prev, {
+        id: data.id,
+        name: data.name,
+        author: data.author,
+        category: data.category,
+        totalCopy: data.total_copy,
+        availableCopy: data.available_copy,
+        coverUrl: data.cover_url ?? undefined,
+      }] );
+    }
+
     setBookName(""); setAuthor(""); setCategory(""); setTotalCopy(""); setCoverPreview(undefined);
     setOpen(false);
     toast.success("Book added successfully");
+  };
+
+  const handleDeleteBook = async (bookId: string) => {
+    const { error } = await supabase.from("books").delete().eq("id", bookId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setBooks(prev => prev.filter((book) => book.id !== bookId));
+    toast.success("Book deleted");
   };
 
   return (
@@ -103,8 +131,15 @@ export default function BooksPage() {
               {book.coverUrl ? <img src={book.coverUrl} alt={book.name} className="w-full h-full object-cover" /> : <BookOpen className="w-12 h-12 text-primary-foreground/40" />}
             </div>
             <div className="p-4 space-y-2">
-              <h3 className="font-heading font-semibold text-card-foreground">{book.name}</h3>
-              <p className="text-sm text-muted-foreground">by {book.author}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-heading font-semibold text-card-foreground">{book.name}</h3>
+                  <p className="text-sm text-muted-foreground">by {book.author}</p>
+                </div>
+                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBook(book.id)}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">{book.category}</span>
                 <span className="text-muted-foreground">{book.availableCopy}/{book.totalCopy} available</span>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,17 +9,39 @@ import { useData } from "@/contexts/DataContext";
 export default function LibraryReportsPage() {
   const { borrowRecords } = useData();
   const [filterType, setFilterType] = useState("all");
+  const [selectedBorrower, setSelectedBorrower] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Get unique students and teachers from borrow records
+  const uniqueStudents = useMemo(() => {
+    const names = new Set(borrowRecords.filter(r => r.borrowerType === "student").map(r => r.borrowerName));
+    return Array.from(names).sort();
+  }, [borrowRecords]);
+
+  const uniqueTeachers = useMemo(() => {
+    const names = new Set(borrowRecords.filter(r => r.borrowerType === "teacher").map(r => r.borrowerName));
+    return Array.from(names).sort();
+  }, [borrowRecords]);
+
   const filtered = borrowRecords.filter(r => {
+    // Filter by type
     if (filterType === "student" && r.borrowerType !== "student") return false;
     if (filterType === "teacher" && r.borrowerType !== "teacher") return false;
-    if (statusFilter === "borrowed" && r.status !== "borrowed") return false;
-    if (statusFilter === "returned" && r.status !== "returned") return false;
+    
+    // Filter by specific borrower
+    if (filterType !== "all" && selectedBorrower !== "all" && r.borrowerName !== selectedBorrower) return false;
+    
+    // Filter by status
+    if (statusFilter !== "all" && r.status !== statusFilter) return false;
+    
+    // Filter by date
     if (dateFilter && r.borrowDate !== dateFilter) return false;
+    
+    // Filter by search query
     if (searchQuery && !r.borrowerName.toLowerCase().includes(searchQuery.toLowerCase()) && !r.bookName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    
     return true;
   });
 
@@ -38,27 +60,43 @@ export default function LibraryReportsPage() {
 
       <div className="bg-card rounded-xl shadow-card border border-border p-5 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <Select value={filterType} onValueChange={setFilterType}>
+          <Select value={filterType} onValueChange={(value) => { setFilterType(value); setSelectedBorrower("all"); }}>
             <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All Records</SelectItem>
               <SelectItem value="student">By Student</SelectItem>
               <SelectItem value="teacher">By Teacher</SelectItem>
             </SelectContent>
           </Select>
+
+          {filterType !== "all" && (
+            <Select value={selectedBorrower} onValueChange={setSelectedBorrower}>
+              <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All {filterType === "student" ? "Students" : "Teachers"}</SelectItem>
+                {(filterType === "student" ? uniqueStudents : uniqueTeachers).map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="borrowed">Borrowed Only</SelectItem>
               <SelectItem value="returned">Returned Only</SelectItem>
+              <SelectItem value="overdue">Overdue Only</SelectItem>
             </SelectContent>
           </Select>
+
           <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="bg-secondary border-border" />
-          <div className="flex gap-2">
-            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search..." className="bg-secondary border-border" />
-            <Button className="gradient-primary text-primary-foreground flex-shrink-0"><Search className="w-4 h-4" /></Button>
-          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by name or book..." className="bg-secondary border-border flex-1" />
+          <Button className="gradient-primary text-primary-foreground flex-shrink-0"><Search className="w-4 h-4" /></Button>
         </div>
       </div>
 
@@ -78,7 +116,7 @@ export default function LibraryReportsPage() {
               <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
             </tr></thead>
             <tbody className="divide-y divide-border">
-              {filtered.map(r => (
+              {filtered.length > 0 ? filtered.map(r => (
                 <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                   <td className="p-4 font-medium text-card-foreground">{r.borrowerName}</td>
                   <td className="p-4 text-muted-foreground capitalize">{r.borrowerType}</td>
@@ -88,7 +126,11 @@ export default function LibraryReportsPage() {
                   <td className="p-4 text-muted-foreground">{r.returnDate || "-"}</td>
                   <td className="p-4"><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[r.status]}`}>{r.status}</span></td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={7} className="p-4 text-center text-muted-foreground">No records found</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

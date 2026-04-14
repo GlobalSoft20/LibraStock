@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (email: string, password: string, fullName: string, phone: string, role: UserRole = "admin"): Promise<{ success: boolean; error?: string }> => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -98,7 +98,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      const lowerMessage = error.message.toLowerCase();
+      if (lowerMessage.includes("already registered") || lowerMessage.includes("already exists") || lowerMessage.includes("duplicate")) {
+        return { success: false, error: "This email is already registered. Please sign in or use a different email." };
+      }
+      return { success: false, error: error.message };
+    }
+
+    const userId = data.user?.id;
+    if (userId) {
+      const { error: accountError } = await supabase.from("account_records").insert({
+        user_id: userId,
+        full_name: fullName,
+        email,
+        phone,
+        role,
+      });
+      if (accountError) {
+        console.error("Failed to create account record:", accountError.message);
+      }
+    }
+
     return { success: true };
   };
 

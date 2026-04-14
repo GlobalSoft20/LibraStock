@@ -54,7 +54,7 @@ const Index = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
             <Link to="/login">
               <Button size="lg" className="gradient-primary text-primary-foreground text-lg px-8 py-6 rounded-xl hover:opacity-90 transition-opacity">
-                Enter Library <ArrowRight className="ml-2 w-5 h-5" />
+                Continue <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
           </motion.div>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
 import { useData } from "@/contexts/DataContext";
 import { toast } from "sonner";
 
@@ -38,6 +39,12 @@ export default function BorrowPage() {
     return matchDept && matchLevel && matchClass && matchSearch;
   });
 
+  const filteredClasses = classes.filter(c => {
+    const deptObj = departments.find(d => d.name === sDept);
+    const lvlObj = levels.find(l => l.name === sLevel);
+    return (!sDept || c.departmentId === deptObj?.id) && (!sLevel || c.levelId === lvlObj?.id);
+  });
+
   const filteredTeachers = teachers.filter(t =>
     !tSearch || t.fullName.toLowerCase().includes(tSearch.toLowerCase())
   );
@@ -46,38 +53,96 @@ export default function BorrowPage() {
     b.availableCopy > 0 && (b.name.toLowerCase().includes(q.toLowerCase()) || b.author.toLowerCase().includes(q.toLowerCase()))
   );
 
-  const handleStudentBorrow = () => {
+  const handleStudentBorrow = async () => {
     const student = students.find(s => s.id === selectedStudent);
     const book = books.find(b => b.id === selectedBook);
     const qty = parseInt(sQty) || 1;
     if (!student || !book) { toast.error("Select student and book"); return; }
     if (book.availableCopy < qty) { toast.error("Not enough copies available"); return; }
 
+    const borrowDate = new Date().toISOString().split("T")[0];
+    const { data: borrowData, error: borrowError } = await supabase.from("borrow_records").insert({
+      book_id: book.id,
+      book_name: book.name,
+      borrower_type: "student",
+      borrower_id: student.id,
+      borrower_name: student.fullName,
+      quantity: qty,
+      borrow_date: borrowDate,
+      status: "borrowed",
+    }).select().single();
+
+    if (borrowError || !borrowData) {
+      toast.error(borrowError?.message || "Failed to record borrow transaction.");
+      return;
+    }
+
+    const { error: bookError } = await supabase.from("books").update({ available_copy: book.availableCopy - qty }).eq("id", book.id);
+    if (bookError) {
+      toast.error(bookError.message);
+      return;
+    }
+
     setBooks(prev => prev.map(b => b.id === book.id ? { ...b, availableCopy: b.availableCopy - qty } : b));
     setBorrowRecords(prev => [...prev, {
-      id: `BR${String(prev.length + 1).padStart(3, "0")}`,
-      bookId: book.id, bookName: book.name, borrowerType: "student",
-      borrowerId: student.id, borrowerName: student.fullName,
-      quantity: qty, borrowDate: new Date().toISOString().split("T")[0], status: "borrowed",
+      id: borrowData.id,
+      bookId: borrowData.book_id,
+      bookName: borrowData.book_name,
+      borrowerType: borrowData.borrower_type,
+      borrowerId: borrowData.borrower_id,
+      borrowerName: borrowData.borrower_name,
+      quantity: borrowData.quantity,
+      borrowDate: borrowData.borrow_date,
+      status: borrowData.status,
     }]);
+
     toast.success(`${book.name} borrowed by ${student.fullName}`);
     setSelectedStudent(""); setSelectedBook(""); setSQty("1"); setSBookSearch("");
   };
 
-  const handleTeacherBorrow = () => {
+  const handleTeacherBorrow = async () => {
     const teacher = teachers.find(t => t.id === selectedTeacher);
     const book = books.find(b => b.id === tSelectedBook);
     const qty = parseInt(tQty) || 1;
     if (!teacher || !book) { toast.error("Select teacher and book"); return; }
     if (book.availableCopy < qty) { toast.error("Not enough copies available"); return; }
 
+    const borrowDate = new Date().toISOString().split("T")[0];
+    const { data: borrowData, error: borrowError } = await supabase.from("borrow_records").insert({
+      book_id: book.id,
+      book_name: book.name,
+      borrower_type: "teacher",
+      borrower_id: teacher.id,
+      borrower_name: teacher.fullName,
+      quantity: qty,
+      borrow_date: borrowDate,
+      status: "borrowed",
+    }).select().single();
+
+    if (borrowError || !borrowData) {
+      toast.error(borrowError?.message || "Failed to record borrow transaction.");
+      return;
+    }
+
+    const { error: bookError } = await supabase.from("books").update({ available_copy: book.availableCopy - qty }).eq("id", book.id);
+    if (bookError) {
+      toast.error(bookError.message);
+      return;
+    }
+
     setBooks(prev => prev.map(b => b.id === book.id ? { ...b, availableCopy: b.availableCopy - qty } : b));
     setBorrowRecords(prev => [...prev, {
-      id: `BR${String(prev.length + 1).padStart(3, "0")}`,
-      bookId: book.id, bookName: book.name, borrowerType: "teacher",
-      borrowerId: teacher.id, borrowerName: teacher.fullName,
-      quantity: qty, borrowDate: new Date().toISOString().split("T")[0], status: "borrowed",
+      id: borrowData.id,
+      bookId: borrowData.book_id,
+      bookName: borrowData.book_name,
+      borrowerType: borrowData.borrower_type,
+      borrowerId: borrowData.borrower_id,
+      borrowerName: borrowData.borrower_name,
+      quantity: borrowData.quantity,
+      borrowDate: borrowData.borrow_date,
+      status: borrowData.status,
     }]);
+
     toast.success(`${book.name} borrowed by ${teacher.fullName}`);
     setSelectedTeacher(""); setTSelectedBook(""); setTQty("1"); setTBookSearch("");
   };
@@ -99,17 +164,17 @@ export default function BorrowPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl shadow-card border border-border p-6 space-y-4">
             <h2 className="font-heading font-semibold text-card-foreground">Find Student</h2>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <Select value={sDept} onValueChange={setSDept}>
+              <Select value={sDept} onValueChange={(value) => { setSDept(value); setSLevel(""); setSClass(""); }}>
                 <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Department" /></SelectTrigger>
                 <SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}</SelectContent>
               </Select>
-              <Select value={sLevel} onValueChange={setSLevel}>
+              <Select value={sLevel} onValueChange={(value) => { setSLevel(value); setSClass(""); }} disabled={!sDept}>
                 <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Level" /></SelectTrigger>
                 <SelectContent>{levels.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
               </Select>
-              <Select value={sClass} onValueChange={setSClass}>
+              <Select value={sClass} onValueChange={setSClass} disabled={!sDept || !sLevel}>
                 <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Class" /></SelectTrigger>
-                <SelectContent>{classes.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{filteredClasses.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
               <Input value={sSearch} onChange={e => setSSearch(e.target.value)} placeholder="Search name/ID" className="bg-secondary border-border" />
             </div>

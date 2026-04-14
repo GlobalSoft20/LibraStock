@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -43,7 +44,12 @@ export default function AdminAccountsPage() {
     toast.success("Account created — user can now log in");
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("account_records").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setAccounts(prev => prev.filter(a => a.id !== id));
     toast.success("Account removed");
   };

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 import { useData } from "@/contexts/DataContext";
 import { toast } from "sonner";
 
@@ -21,10 +22,30 @@ export default function TeachersPage() {
     t.fullName.toLowerCase().includes(search.toLowerCase()) || t.subject.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!fullName || !email || !phone || !subject) { toast.error("Fill all fields"); return; }
-    const id = `TCH${String(teachers.length + 1).padStart(4, "0")}`;
-    setTeachers(prev => [...prev, { id, fullName, email, phone, subject }]);
+    const { data, error } = await supabase.from("teachers").insert({
+      full_name: fullName,
+      email,
+      phone,
+      subject,
+    }).select().single();
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    if (data) {
+      setTeachers(prev => [...prev, {
+        id: data.id,
+        fullName: data.full_name,
+        email: data.email ?? "",
+        phone: data.phone ?? "",
+        subject: data.subject ?? "",
+      }] );
+    }
+
     setFullName(""); setEmail(""); setPhone(""); setSubject("");
     setOpen(false);
     toast.success("Teacher added");

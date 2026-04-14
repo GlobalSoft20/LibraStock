@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Building2, ChevronDown, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 import { useData } from "@/contexts/DataContext";
 import { toast } from "sonner";
 
@@ -12,6 +14,7 @@ export default function SchoolInfoPage() {
   const [expandedDepts, setExpandedDepts] = useState<string[]>([]);
   const [expandedLevels, setExpandedLevels] = useState<string[]>([]);
   const [deptName, setDeptName] = useState("");
+  const [deptDescription, setDeptDescription] = useState("");
   const [deptDialogOpen, setDeptDialogOpen] = useState(false);
   const [levelDialogOpen, setLevelDialogOpen] = useState<string | null>(null);
   const [classDialogOpen, setClassDialogOpen] = useState<{ deptId: string; levelId: string } | null>(null);
@@ -26,45 +29,87 @@ export default function SchoolInfoPage() {
     setExpandedLevels(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]);
   };
 
-  const addDepartment = () => {
+  const addDepartment = async () => {
     if (!deptName.trim()) return;
-    setDepartments(d => [...d, { id: Date.now().toString(), name: deptName.trim() }]);
+    const { data, error } = await supabase.from("departments").insert({
+      name: deptName.trim(),
+      description: deptDescription.trim(),
+    }).select().single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (data) {
+      setDepartments(d => [...d, { id: data.id, name: data.name, description: data.description ?? "" }]);
+    }
     setDeptName("");
+    setDeptDescription("");
     setDeptDialogOpen(false);
     toast.success("Department added");
   };
 
-  const deleteDepartment = (id: string) => {
+  const deleteDepartment = async (id: string) => {
+    const { error } = await supabase.from("departments").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setDepartments(d => d.filter(x => x.id !== id));
     setClasses(c => c.filter(x => x.departmentId !== id));
     toast.success("Department deleted");
   };
 
-  const addLevel = (deptId: string) => {
+  const addLevel = async () => {
     if (!levelName.trim()) return;
-    const newLevel = { id: Date.now().toString(), name: levelName.trim() };
-    setLevels(l => [...l, newLevel]);
-    // Auto-associate: we track dept-level via a dummy class or just use levelId
+    const { data, error } = await supabase.from("levels").insert({ name: levelName.trim() }).select().single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (data) {
+      setLevels(l => [...l, { id: data.id, name: data.name }]);
+    }
     setLevelDialogOpen(null);
     setLevelName("");
     toast.success("Level added");
   };
 
-  const deleteLevel = (levelId: string) => {
+  const deleteLevel = async (levelId: string) => {
+    const { error } = await supabase.from("levels").delete().eq("id", levelId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setLevels(l => l.filter(x => x.id !== levelId));
     setClasses(c => c.filter(x => x.levelId !== levelId));
     toast.success("Level deleted");
   };
 
-  const addClass = (deptId: string, levelId: string) => {
+  const addClass = async (deptId: string, levelId: string) => {
     if (!className.trim()) return;
-    setClasses(c => [...c, { id: Date.now().toString(), name: className.trim(), departmentId: deptId, levelId }]);
+    const { data, error } = await supabase.from("school_classes").insert({
+      name: className.trim(),
+      department_id: deptId,
+      level_id: levelId,
+    }).select().single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (data) {
+      setClasses(c => [...c, { id: data.id, name: data.name, departmentId: data.department_id, levelId: data.level_id }]);
+    }
     setClassName("");
     setClassDialogOpen(null);
     toast.success("Class added");
   };
 
-  const deleteClass = (classId: string) => {
+  const deleteClass = async (classId: string) => {
+    const { error } = await supabase.from("school_classes").delete().eq("id", classId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setClasses(c => c.filter(x => x.id !== classId));
   };
 
@@ -103,6 +148,12 @@ export default function SchoolInfoPage() {
                 className="bg-secondary border-border"
                 onKeyDown={(e) => e.key === "Enter" && addDepartment()}
               />
+              <Textarea
+                value={deptDescription}
+                onChange={(e) => setDeptDescription(e.target.value)}
+                placeholder="Department description"
+                className="bg-secondary border-border h-24"
+              />
               <Button onClick={addDepartment} className="w-full gradient-primary text-primary-foreground">Add Department</Button>
             </div>
           </DialogContent>
@@ -128,7 +179,7 @@ export default function SchoolInfoPage() {
                 </div>
                 <div>
                   <h3 className="font-heading font-semibold text-card-foreground">{dept.name}</h3>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">{dept.name}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{dept.description || "No description provided."}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
