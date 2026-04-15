@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Department {
   id: string;
@@ -110,6 +111,7 @@ interface DataContextType {
   setStockMovements: React.Dispatch<React.SetStateAction<StockMovement[]>>;
   accounts: AccountRecord[];
   setAccounts: React.Dispatch<React.SetStateAction<AccountRecord[]>>;
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -211,6 +213,7 @@ function mapAccount(row: any): AccountRecord {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -222,39 +225,53 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
 
+  const refreshData = async () => {
+    const [departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes] = await Promise.all([
+      supabase.from("departments").select("*").order("name", { ascending: true }),
+      supabase.from("levels").select("*").order("name", { ascending: true }),
+      supabase.from("school_classes").select("*").order("name", { ascending: true }),
+      supabase.from("books").select("*").order("name", { ascending: true }),
+      supabase.from("students").select("*").order("full_name", { ascending: true }),
+      supabase.from("teachers").select("*").order("full_name", { ascending: true }),
+      supabase.from("borrow_records").select("*").order("borrow_date", { ascending: false }),
+      supabase.from("stock_items").select("*").order("added_date", { ascending: false }),
+      supabase.from("stock_movements").select("*").order("date", { ascending: false }),
+      supabase.from("account_records").select("*").order("created_at", { ascending: false }),
+    ]);
+
+    if (!departmentsRes.error) setDepartments(departmentsRes.data.map(mapDepartment));
+    if (!levelsRes.error) setLevels(levelsRes.data.map(mapLevel));
+    if (!classesRes.error) setClasses(classesRes.data.map(mapClass));
+    if (!booksRes.error) setBooks(booksRes.data.map(mapBook));
+    if (!studentsRes.error) setStudents(studentsRes.data.map(mapStudent));
+    if (!teachersRes.error) setTeachers(teachersRes.data.map(mapTeacher));
+    if (!borrowRes.error) setBorrowRecords(borrowRes.data.map(mapBorrowRecord));
+    if (!stockItemsRes.error) setStockItems(stockItemsRes.data.map(mapStockItem));
+    if (!stockMovementsRes.error) setStockMovements(stockMovementsRes.data.map(mapStockMovement));
+    if (!accountsRes.error) setAccounts(accountsRes.data.map(mapAccount));
+
+    if (departmentsRes.error || levelsRes.error || classesRes.error || booksRes.error || studentsRes.error || teachersRes.error || borrowRes.error || stockItemsRes.error || stockMovementsRes.error || accountsRes.error) {
+      console.error({ departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes });
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      const [departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes] = await Promise.all([
-        supabase.from("departments").select("*").order("name", { ascending: true }),
-        supabase.from("levels").select("*").order("name", { ascending: true }),
-        supabase.from("school_classes").select("*").order("name", { ascending: true }),
-        supabase.from("books").select("*").order("name", { ascending: true }),
-        supabase.from("students").select("*").order("full_name", { ascending: true }),
-        supabase.from("teachers").select("*").order("full_name", { ascending: true }),
-        supabase.from("borrow_records").select("*").order("borrow_date", { ascending: false }),
-        supabase.from("stock_items").select("*").order("added_date", { ascending: false }),
-        supabase.from("stock_movements").select("*").order("date", { ascending: false }),
-        supabase.from("account_records").select("*").order("created_at", { ascending: false }),
-      ]);
-
-      if (!departmentsRes.error) setDepartments(departmentsRes.data.map(mapDepartment));
-      if (!levelsRes.error) setLevels(levelsRes.data.map(mapLevel));
-      if (!classesRes.error) setClasses(classesRes.data.map(mapClass));
-      if (!booksRes.error) setBooks(booksRes.data.map(mapBook));
-      if (!studentsRes.error) setStudents(studentsRes.data.map(mapStudent));
-      if (!teachersRes.error) setTeachers(teachersRes.data.map(mapTeacher));
-      if (!borrowRes.error) setBorrowRecords(borrowRes.data.map(mapBorrowRecord));
-      if (!stockItemsRes.error) setStockItems(stockItemsRes.data.map(mapStockItem));
-      if (!stockMovementsRes.error) setStockMovements(stockMovementsRes.data.map(mapStockMovement));
-      if (!accountsRes.error) setAccounts(accountsRes.data.map(mapAccount));
-
-      if (departmentsRes.error || levelsRes.error || classesRes.error || booksRes.error || studentsRes.error || teachersRes.error || borrowRes.error || stockItemsRes.error || stockMovementsRes.error || accountsRes.error) {
-        console.error({ departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes });
-      }
-    };
-
-    loadData();
-  }, []);
+    if (isLoading) return;
+    if (isAuthenticated) {
+      refreshData();
+    } else {
+      setDepartments([]);
+      setLevels([]);
+      setClasses([]);
+      setBooks([]);
+      setStudents([]);
+      setTeachers([]);
+      setBorrowRecords([]);
+      setStockItems([]);
+      setStockMovements([]);
+      setAccounts([]);
+    }
+  }, [isAuthenticated, isLoading]);
 
   return (
     <DataContext.Provider value={{
@@ -278,6 +295,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setStockMovements,
       accounts,
       setAccounts,
+      refreshData,
     }}>
       {children}
     </DataContext.Provider>
