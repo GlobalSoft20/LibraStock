@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, LayoutDashboard, Users, GraduationCap, Package,
   FileText, LogOut, Menu, Bell, Search, User, Settings,
-  Sun, Moon, ArrowDownToLine, ArrowUpFromLine, Building2, UserPlus
+  Sun, Moon, ArrowDownToLine, ArrowUpFromLine, Building2, UserPlus,
+  DollarSign, Receipt, TrendingDown, TrendingUp, ArrowUpRight, PiggyBank
 } from "lucide-react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -21,6 +22,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" />, path: "/admin" },
     { label: "Library", icon: <BookOpen className="w-5 h-5" />, path: "/admin/library" },
     { label: "Stock", icon: <Package className="w-5 h-5" />, path: "/admin/stock" },
+    { label: "Finance", icon: <DollarSign className="w-5 h-5" />, path: "/admin/finance" },
     { label: "Accounts", icon: <UserPlus className="w-5 h-5" />, path: "/admin/accounts" },
     { label: "Reports", icon: <FileText className="w-5 h-5" />, path: "/admin/reports" },
     { label: "Notifications", icon: <Bell className="w-5 h-5" />, path: "/admin/notifications" },
@@ -46,6 +48,18 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Reports", icon: <FileText className="w-5 h-5" />, path: "/stock/reports" },
     { label: "Notifications", icon: <Bell className="w-5 h-5" />, path: "/stock/notifications" },
     { label: "Settings", icon: <Settings className="w-5 h-5" />, path: "/stock/settings" },
+  ],
+  finance_officer: [
+    { label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" />, path: "/finance" },
+    { label: "Student Fees", icon: <GraduationCap className="w-5 h-5" />, path: "/finance/student-fees" },
+    { label: "Fee Structure", icon: <FileText className="w-5 h-5" />, path: "/finance/fee-structure" },
+    { label: "Payment Records", icon: <Receipt className="w-5 h-5" />, path: "/finance/payment-records" },
+    { label: "Expenses", icon: <TrendingDown className="w-5 h-5" />, path: "/finance/expenses" },
+    { label: "Transactions", icon: <ArrowUpRight className="w-5 h-5" />, path: "/finance/payroll" },
+    { label: "Other Income", icon: <PiggyBank className="w-5 h-5" />, path: "/finance/other-income" },
+    { label: "Reports", icon: <TrendingUp className="w-5 h-5" />, path: "/finance/reports" },
+    { label: "Notifications", icon: <Bell className="w-5 h-5" />, path: "/finance/notifications" },
+    { label: "Settings", icon: <Settings className="w-5 h-5" />, path: "/finance/settings" },
   ],
 };
 
@@ -159,7 +173,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             <Link
-              to={user.role === "admin" ? "/admin/notifications" : user.role === "librarian" ? "/library/notifications" : "/stock/notifications"}
+              to={user.role === "admin" ? "/admin/notifications" : user.role === "librarian" ? "/library/notifications" : user.role === "finance_officer" ? "/finance/notifications" : "/stock/notifications"}
               className="p-2 rounded-lg hover:bg-secondary transition-colors relative text-foreground"
             >
               <Bell className="w-5 h-5" />

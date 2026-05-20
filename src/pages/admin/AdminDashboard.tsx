@@ -1,15 +1,58 @@
-import { BookOpen, Users, Package, GraduationCap, TrendingUp, AlertTriangle, Bell } from "lucide-react";
+import { BookOpen, Users, Package, GraduationCap, TrendingUp, AlertTriangle, Bell, DollarSign, TrendingDown, Receipt, Banknote } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import StatCard from "@/components/StatCard";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { books, students, teachers, stockItems, borrowRecords, stockMovements, accounts } = useData();
 
   const lowStockItems = stockItems.filter(i => i.quantity <= i.lowStockQty);
+
+  const [totalCollected, setTotalCollected] = useState<number>(0);
+  const [unpaidBalance, setUnpaidBalance] = useState<number>(0);
+  const [totalExpenses, setTotalExpenses] = useState<number>(0);
+  const [otherIncome, setOtherIncome] = useState<number>(0);
+
+  const fmt = (n: number) => `${Math.round(n).toLocaleString()} FRW`;
+
+  useEffect(() => {
+    const loadFinance = async () => {
+      const [{ data: fees, error: feesErr }, { data: tx, error: txErr }, { data: inc, error: incErr }] = await Promise.all([
+        supabase.from("student_fees").select("total_fee,amount_paid").limit(5000),
+        supabase.from("external_transactions").select("total_amount,category").limit(5000),
+        supabase.from("other_incomes").select("amount").limit(5000),
+      ]);
+
+      if (feesErr) console.error("Failed to load student fees for admin dashboard:", feesErr);
+      if (txErr) console.error("Failed to load transactions for admin dashboard:", txErr);
+      if (incErr) console.error("Failed to load other incomes for admin dashboard:", incErr);
+
+      if (fees) {
+        const collected = fees.reduce((sum: number, r: any) => sum + Number(r.amount_paid ?? 0), 0);
+        const unpaid = fees.reduce((sum: number, r: any) => sum + Math.max(0, Number(r.total_fee ?? 0) - Number(r.amount_paid ?? 0)), 0);
+        setTotalCollected(collected);
+        setUnpaidBalance(unpaid);
+      }
+
+      if (tx) {
+        const expenses = tx
+          .filter((r: any) => (r.category ?? "Expenses") === "Expenses")
+          .reduce((sum: number, r: any) => sum + Number(r.total_amount ?? 0), 0);
+        setTotalExpenses(expenses);
+      }
+
+      if (inc) {
+        setOtherIncome(inc.reduce((sum: number, r: any) => sum + Number(r.amount ?? 0), 0));
+      }
+    };
+
+    loadFinance();
+  }, []);
 
   const recentActivities = [
     ...borrowRecords.slice(-3).reverse().map(r => ({
@@ -49,6 +92,20 @@ export default function AdminDashboard() {
         <StatCard title="Students" value={students.length} icon={<GraduationCap className="w-5 h-5 text-accent-foreground" />} gradient="accent" />
         <StatCard title="Teachers" value={teachers.length} icon={<Users className="w-5 h-5 text-warning-foreground" />} gradient="warm" />
         <StatCard title="Stock Items" value={stockItems.length} icon={<Package className="w-5 h-5 text-primary-foreground" />} gradient="primary" />
+      </div>
+
+      {/* Finance Summary */}
+      <div>
+        <h2 className="text-base font-heading font-semibold text-foreground mb-3 flex items-center gap-2">
+          <DollarSign className="w-4 h-4 text-primary" /> Finance Overview
+          <Link to="/admin/finance" className="ml-auto text-xs text-primary hover:underline">View details →</Link>
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title="Total Collected" value={fmt(totalCollected)} icon={<DollarSign className="w-5 h-5 text-primary-foreground" />} gradient="primary" />
+          <StatCard title="Unpaid Balance" value={fmt(unpaidBalance)} icon={<Receipt className="w-5 h-5 text-accent-foreground" />} gradient="accent" />
+          <StatCard title="Total Expenses" value={fmt(totalExpenses)} icon={<TrendingDown className="w-5 h-5 text-warning-foreground" />} gradient="warm" />
+          <StatCard title="Other Income" value={fmt(otherIncome)} icon={<Banknote className="w-5 h-5 text-primary-foreground" />} gradient="primary" />
+        </div>
       </div>
 
       {lowStockItems.length > 0 && (

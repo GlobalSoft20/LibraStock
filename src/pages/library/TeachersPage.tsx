@@ -19,7 +19,10 @@ export default function TeachersPage() {
   const [subject, setSubject] = useState("");
 
   const filtered = teachers.filter(t =>
-    t.fullName.toLowerCase().includes(search.toLowerCase()) || t.subject.toLowerCase().includes(search.toLowerCase())
+    t.fullName.toLowerCase().includes(search.toLowerCase()) ||
+    t.email.toLowerCase().includes(search.toLowerCase()) ||
+    t.phone.toLowerCase().includes(search.toLowerCase()) ||
+    t.subject.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleAdd = async () => {
@@ -84,7 +87,6 @@ export default function TeachersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-border bg-muted/50">
-              <th className="text-left p-4 font-medium text-muted-foreground">ID</th>
               <th className="text-left p-4 font-medium text-muted-foreground">Full Name</th>
               <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
               <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
@@ -93,7 +95,6 @@ export default function TeachersPage() {
             <tbody className="divide-y divide-border">
               {filtered.map(t => (
                 <tr key={t.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="p-4 text-muted-foreground">{t.id}</td>
                   <td className="p-4 font-medium text-card-foreground">{t.fullName}</td>
                   <td className="p-4 text-card-foreground">{t.email}</td>
                   <td className="p-4 text-muted-foreground">{t.phone}</td>

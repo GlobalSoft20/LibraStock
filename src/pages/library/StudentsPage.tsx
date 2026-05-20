@@ -15,7 +15,7 @@ import * as pdfjs from "pdfjs-dist";
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 export default function StudentsPage() {
-  const { students, setStudents, departments, levels, classes } = useData();
+  const { students, setStudents, departments, levels, classes, borrowRecords } = useData();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -129,7 +129,12 @@ export default function StudentsPage() {
 
   const handleAddStudent = async () => {
     if (!fullName || !dept || !level || !cls) { toast.error("Fill all fields"); return; }
+    const newId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `student-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
     const { data, error } = await supabase.from("students").insert({
+      id: newId,
       full_name: fullName,
       department: dept,
       level,
@@ -143,8 +148,8 @@ export default function StudentsPage() {
 
     if (data) {
       setStudents(prev => [...prev, {
-        id: data.id,
-        studentNumber: data.student_number,
+        id: data.id ?? newId,
+        studentNumber: data.student_number ?? "",
         fullName: data.full_name,
         department: data.department,
         level: data.level,

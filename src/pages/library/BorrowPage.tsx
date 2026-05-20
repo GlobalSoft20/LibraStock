@@ -35,7 +35,7 @@ export default function BorrowPage() {
     const matchDept = !sDept || s.department === sDept;
     const matchLevel = !sLevel || s.level === sLevel;
     const matchClass = !sClass || s.class === sClass;
-    const matchSearch = !sSearch || s.fullName.toLowerCase().includes(sSearch.toLowerCase()) || s.id.toLowerCase().includes(sSearch.toLowerCase());
+    const matchSearch = !sSearch || s.fullName.toLowerCase().includes(sSearch.toLowerCase()) || s.studentNumber.toLowerCase().includes(sSearch.toLowerCase()) || s.id.toLowerCase().includes(sSearch.toLowerCase());
     return matchDept && matchLevel && matchClass && matchSearch;
   });
 
@@ -181,7 +181,7 @@ export default function BorrowPage() {
             {filteredStudents.length > 0 && (
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                 <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select student" /></SelectTrigger>
-                <SelectContent>{filteredStudents.map(s => <SelectItem key={s.id} value={s.id}>{s.fullName} ({s.id})</SelectItem>)}</SelectContent>
+                <SelectContent>{filteredStudents.map(s => <SelectItem key={s.id} value={s.id}>{s.fullName} ({s.studentNumber || s.id})</SelectItem>)}</SelectContent>
               </Select>
             )}
 

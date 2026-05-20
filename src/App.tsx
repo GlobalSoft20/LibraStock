@@ -30,6 +30,15 @@ import StockItemsPage from "./pages/stock/StockItemsPage";
 import StockInPage from "./pages/stock/StockInPage";
 import StockOutPage from "./pages/stock/StockOutPage";
 import StockReportsPage from "./pages/stock/StockReportsPage";
+import AdminFinancePage from "./pages/admin/AdminFinancePage";
+import FinanceReportsPage from "./pages/finance/FinanceReportsPage";
+import FinanceDashboard from "./pages/finance/FinanceDashboard";
+import StudentFeesPage from "./pages/finance/StudentFeesPage";
+import FeeStructurePage from "./pages/finance/FeeStructurePage";
+import PaymentRecordsPage from "./pages/finance/PaymentRecordsPage";
+import ExpensesPage from "./pages/finance/ExpensesPage";
+import PayrollPage from "./pages/finance/PayrollPage";
+import OtherIncomePage from "./pages/finance/OtherIncomePage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
@@ -44,7 +53,12 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
 
 function AppRoutes() {
   const { isAuthenticated, user, isLoading } = useAuth();
-  const defaultPath = user ? (user.role === "admin" ? "/admin" : user.role === "librarian" ? "/library" : "/stock") : "/";
+  const defaultPath = user
+    ? user.role === "admin" ? "/admin"
+    : user.role === "librarian" ? "/library"
+    : user.role === "finance_officer" ? "/finance"
+    : "/stock"
+    : "/";
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
@@ -61,6 +75,7 @@ function AppRoutes() {
       <Route path="/admin/stock" element={<ProtectedRoute allowedRoles={["admin"]}><AdminStockPage /></ProtectedRoute>} />
       <Route path="/admin/accounts" element={<ProtectedRoute allowedRoles={["admin"]}><AdminAccountsPage /></ProtectedRoute>} />
       <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={["admin"]}><AdminReportsPage /></ProtectedRoute>} />
+      <Route path="/admin/finance" element={<ProtectedRoute allowedRoles={["admin"]}><AdminFinancePage /></ProtectedRoute>} />
       <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={["admin"]}><NotificationsPage /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={["admin"]}><SettingsPage /></ProtectedRoute>} />
       <Route path="/library" element={<ProtectedRoute allowedRoles={["librarian"]}><LibraryDashboard /></ProtectedRoute>} />
@@ -80,6 +95,16 @@ function AppRoutes() {
       <Route path="/stock/reports" element={<ProtectedRoute allowedRoles={["stock_manager"]}><StockReportsPage /></ProtectedRoute>} />
       <Route path="/stock/notifications" element={<ProtectedRoute allowedRoles={["stock_manager"]}><NotificationsPage /></ProtectedRoute>} />
       <Route path="/stock/settings" element={<ProtectedRoute allowedRoles={["stock_manager"]}><SettingsPage /></ProtectedRoute>} />
+      <Route path="/finance" element={<ProtectedRoute allowedRoles={["finance_officer"]}><FinanceDashboard /></ProtectedRoute>} />
+      <Route path="/finance/student-fees" element={<ProtectedRoute allowedRoles={["finance_officer"]}><StudentFeesPage /></ProtectedRoute>} />
+      <Route path="/finance/fee-structure" element={<ProtectedRoute allowedRoles={["finance_officer"]}><FeeStructurePage /></ProtectedRoute>} />
+      <Route path="/finance/payment-records" element={<ProtectedRoute allowedRoles={["finance_officer"]}><PaymentRecordsPage /></ProtectedRoute>} />
+      <Route path="/finance/expenses" element={<ProtectedRoute allowedRoles={["finance_officer"]}><ExpensesPage /></ProtectedRoute>} />
+      <Route path="/finance/payroll" element={<ProtectedRoute allowedRoles={["finance_officer"]}><PayrollPage /></ProtectedRoute>} />
+      <Route path="/finance/other-income" element={<ProtectedRoute allowedRoles={["finance_officer"]}><OtherIncomePage /></ProtectedRoute>} />
+      <Route path="/finance/reports" element={<ProtectedRoute allowedRoles={["finance_officer", "admin"]}><FinanceReportsPage /></ProtectedRoute>} />
+      <Route path="/finance/notifications" element={<ProtectedRoute allowedRoles={["finance_officer"]}><NotificationsPage /></ProtectedRoute>} />
+      <Route path="/finance/settings" element={<ProtectedRoute allowedRoles={["finance_officer"]}><SettingsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

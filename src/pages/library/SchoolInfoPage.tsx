@@ -59,15 +59,16 @@ export default function SchoolInfoPage() {
     toast.success("Department deleted");
   };
 
-  const addLevel = async () => {
+  const addLevel = async (deptId?: string) => {
     if (!levelName.trim()) return;
-    const { data, error } = await supabase.from("levels").insert({ name: levelName.trim() }).select().single();
+    if (!deptId) { toast.error("Missing department"); return; }
+    const { data, error } = await supabase.from("levels").insert({ name: levelName.trim(), department_id: deptId }).select().single();
     if (error) {
       toast.error(error.message);
       return;
     }
     if (data) {
-      setLevels(l => [...l, { id: data.id, name: data.name }]);
+      setLevels(l => [...l, { id: data.id, name: data.name, departmentId: data.department_id }]);
     }
     setLevelDialogOpen(null);
     setLevelName("");
@@ -113,12 +114,9 @@ export default function SchoolInfoPage() {
     setClasses(c => c.filter(x => x.id !== classId));
   };
 
-  // Get levels that have classes in a specific department, plus all levels (for adding)
+  // Get levels for a specific department
   const getLevelsForDept = (deptId: string) => {
-    const classesInDept = classes.filter(c => c.departmentId === deptId);
-    const levelIds = [...new Set(classesInDept.map(c => c.levelId))];
-    // Also include levels that might not have classes yet but were added
-    return levels;
+    return levels.filter(l => l.departmentId === deptId);
   };
 
   const getClassesForDeptLevel = (deptId: string, levelId: string) => {
@@ -238,7 +236,7 @@ export default function SchoolInfoPage() {
                     </div>
 
                     {/* Levels List */}
-                    {levels.map((level) => {
+                    {getLevelsForDept(dept.id).map((level) => {
                       const levelKey = `${dept.id}-${level.id}`;
                       const levelClasses = getClassesForDeptLevel(dept.id, level.id);
                       

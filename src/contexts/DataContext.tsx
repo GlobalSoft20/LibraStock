@@ -11,6 +11,7 @@ export interface Department {
 export interface Level {
   id: string;
   name: string;
+  departmentId?: string;
 }
 
 export interface SchoolClass {
@@ -45,6 +46,20 @@ export interface Teacher {
   email: string;
   phone: string;
   subject: string;
+}
+
+export interface AcademicYear {
+  id: string;
+  name: string;
+  isCurrent: boolean;
+}
+
+export interface Term {
+  id: string;
+  academicYearId: string;
+  termNumber: number;
+  name: string;
+  isCurrent: boolean;
 }
 
 export interface BorrowRecord {
@@ -86,7 +101,7 @@ export interface AccountRecord {
   fullName: string;
   email: string;
   phone: string;
-  role: "librarian" | "stock_manager";
+  role: "librarian" | "stock_manager" | "finance_officer";
   createdAt: string;
 }
 
@@ -111,6 +126,10 @@ interface DataContextType {
   setStockMovements: React.Dispatch<React.SetStateAction<StockMovement[]>>;
   accounts: AccountRecord[];
   setAccounts: React.Dispatch<React.SetStateAction<AccountRecord[]>>;
+  academicYears: AcademicYear[];
+  setAcademicYears: React.Dispatch<React.SetStateAction<AcademicYear[]>>;
+  terms: Term[];
+  setTerms: React.Dispatch<React.SetStateAction<Term[]>>;
   refreshData: () => Promise<void>;
 }
 
@@ -121,7 +140,7 @@ function mapDepartment(row: any): Department {
 }
 
 function mapLevel(row: any): Level {
-  return { id: row.id, name: row.name };
+  return { id: row.id, name: row.name, departmentId: row.department_id };
 }
 
 function mapClass(row: any): SchoolClass {
@@ -143,7 +162,7 @@ function mapBook(row: any): Book {
 function mapStudent(row: any): Student {
   return {
     id: row.id,
-    studentNumber: row.student_number ?? row.studentNumber ?? row.id,
+    studentNumber: row.student_number ?? row.studentNumber ?? row.id ?? "",
     fullName: row.full_name,
     department: row.department,
     level: row.level,
@@ -224,9 +243,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
 
   const refreshData = async () => {
-    const [departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes] = await Promise.all([
+    const [departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes, academicYearsRes, termsRes] = await Promise.all([
       supabase.from("departments").select("*").order("name", { ascending: true }),
       supabase.from("levels").select("*").order("name", { ascending: true }),
       supabase.from("school_classes").select("*").order("name", { ascending: true }),
@@ -237,6 +258,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       supabase.from("stock_items").select("*").order("added_date", { ascending: false }),
       supabase.from("stock_movements").select("*").order("date", { ascending: false }),
       supabase.from("account_records").select("*").order("created_at", { ascending: false }),
+      supabase.from("academic_years").select("*").order("created_at", { ascending: false }),
+      supabase.from("terms").select("*").order("academic_year_id", { ascending: true }),
     ]);
 
     if (!departmentsRes.error) setDepartments(departmentsRes.data.map(mapDepartment));
@@ -249,9 +272,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!stockItemsRes.error) setStockItems(stockItemsRes.data.map(mapStockItem));
     if (!stockMovementsRes.error) setStockMovements(stockMovementsRes.data.map(mapStockMovement));
     if (!accountsRes.error) setAccounts(accountsRes.data.map(mapAccount));
+    if (!academicYearsRes.error) setAcademicYears(academicYearsRes.data.map((r: any) => ({ id: r.id, name: r.name, isCurrent: r.is_current })));
+    if (!termsRes.error) setTerms(termsRes.data.map((r: any) => ({ id: r.id, academicYearId: r.academic_year_id, termNumber: r.term_number, name: r.name, isCurrent: r.is_current })));
 
-    if (departmentsRes.error || levelsRes.error || classesRes.error || booksRes.error || studentsRes.error || teachersRes.error || borrowRes.error || stockItemsRes.error || stockMovementsRes.error || accountsRes.error) {
-      console.error({ departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes });
+    if (departmentsRes.error || levelsRes.error || classesRes.error || booksRes.error || studentsRes.error || teachersRes.error || borrowRes.error || stockItemsRes.error || stockMovementsRes.error || accountsRes.error || academicYearsRes.error || termsRes.error) {
+      console.error({ departmentsRes, levelsRes, classesRes, booksRes, studentsRes, teachersRes, borrowRes, stockItemsRes, stockMovementsRes, accountsRes, academicYearsRes, termsRes });
     }
   };
 
@@ -270,6 +295,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setStockItems([]);
       setStockMovements([]);
       setAccounts([]);
+      setAcademicYears([]);
+      setTerms([]);
     }
   }, [isAuthenticated, isLoading]);
 
@@ -295,6 +322,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setStockMovements,
       accounts,
       setAccounts,
+      academicYears,
+      setAcademicYears,
+      terms,
+      setTerms,
       refreshData,
     }}>
       {children}

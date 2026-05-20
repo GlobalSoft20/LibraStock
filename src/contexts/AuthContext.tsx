@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 
-export type UserRole = "admin" | "librarian" | "stock_manager";
+export type UserRole = "admin" | "librarian" | "stock_manager" | "finance_officer";
 
 export interface User {
   id: string;
@@ -156,5 +156,6 @@ export function getRoleDashboard(role: UserRole): string {
     case "admin": return "/admin";
     case "librarian": return "/library";
     case "stock_manager": return "/stock";
+    case "finance_officer": return "/finance";
   }
 }

@@ -18,7 +18,7 @@ export default function AdminAccountsPage() {
   const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"librarian" | "stock_manager" | "">("");
+  const [role, setRole] = useState<"librarian" | "stock_manager" | "finance_officer" | "">("");
 
   const handleCreate = async () => {
     if (!fullName || !email || !phone || !role || !username || !password) {
@@ -30,14 +30,14 @@ export default function AdminAccountsPage() {
       return;
     }
     // Register in auth system so they can log in
-    const result = await register(email, password, fullName, phone, role as "librarian" | "stock_manager");
+    const result = await register(email, password, fullName, phone, role as "librarian" | "stock_manager" | "finance_officer");
     if (!result.success) {
       toast.error(result.error || "Failed to create account");
       return;
     }
     setAccounts(prev => [...prev, {
       id: Date.now().toString(), fullName, email, phone,
-      role: role as "librarian" | "stock_manager",
+      role: role as "librarian" | "stock_manager" | "finance_officer",
       createdAt: new Date().toISOString().split("T")[0],
     }]);
     setFullName(""); setEmail(""); setPhone(""); setRole(""); setUsername(""); setPassword("");
@@ -68,6 +68,7 @@ export default function AdminAccountsPage() {
               <SelectContent>
                 <SelectItem value="librarian">Library Manager</SelectItem>
                 <SelectItem value="stock_manager">Stock Manager</SelectItem>
+                <SelectItem value="finance_officer">Finance Officer</SelectItem>
               </SelectContent>
             </Select>
           </div>
